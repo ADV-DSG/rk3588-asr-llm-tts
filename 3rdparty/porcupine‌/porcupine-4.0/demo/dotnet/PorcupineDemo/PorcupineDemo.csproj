@@ -1,0 +1,25 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net8.0</TargetFramework>
+        <Configurations>FileDemo.Debug;FileDemo.Release;MicDemo.Debug;MicDemo.Release</Configurations>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(Configuration)' == 'FileDemo.Debug' Or '$(Configuration)' == 'FileDemo.Release'">
+        <StartupObject>PorcupineDemo.FileDemo</StartupObject>
+        <TargetName>PorcupineFileDemo</TargetName>
+        <AssemblyName>PorcupineFileDemo</AssemblyName>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(Configuration)' == 'MicDemo.Debug' Or '$(Configuration)' == 'MicDemo.Release'">
+        <StartupObject>PorcupineDemo.MicDemo</StartupObject>
+        <TargetName>PorcupineMicDemo</TargetName>
+        <AssemblyName>PorcupineMicDemo</AssemblyName>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Porcupine" Version="4.0.0" />
+        <PackageReference Include="PvRecorder" Version="1.2.10" />
+    </ItemGroup>
+</Project>

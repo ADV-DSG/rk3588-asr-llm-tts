@@ -1,0 +1,160 @@
+#
+# Copyright 2018-2025 Picovoice Inc.
+#
+# You may not use this file except in compliance with the license. A copy of the license is located in the "LICENSE"
+# file accompanying this source.
+#
+# Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+# an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+# specific language governing permissions and limitations under the License.
+#
+
+import argparse
+import sys
+import unittest
+
+from parameterized import parameterized
+
+from _porcupine import (
+    list_hardware_devices,
+    Porcupine,
+    PorcupineError
+)
+
+from _util import pv_library_path
+from test_util import *
+
+
+single_keyword_parameters, multiple_keywords_parameters = load_test_data()
+
+
+class PorcupineTestCase(unittest.TestCase):
+
+    access_key: str
+    device: str
+
+    def run_porcupine(self, language, keywords, ground_truth, audio_file_name=None):
+        relative_path = '../..'
+
+        keyword_paths = get_keyword_paths_by_language(relative_path, language, keywords)
+
+        porcupine = Porcupine(
+            access_key=self.access_key,
+            library_path=pv_library_path(relative_path),
+            model_path=get_model_path_by_language(relative_path, language),
+            device=self.device,
+            keyword_paths=keyword_paths,
+            sensitivities=[0.5] * len(keyword_paths))
+
+        audio_file = get_audio_file_by_language(relative_path, language, audio_file_name)
+        audio = read_wav_file(
+            audio_file,
+            porcupine.sample_rate)
+
+        num_frames = len(audio) // porcupine.frame_length
+        results = []
+        for i in range(num_frames):
+            frame = audio[i * porcupine.frame_length:(i + 1) * porcupine.frame_length]
+            result = porcupine.process(frame)
+            if result >= 0:
+                results.append(result)
+
+        porcupine.delete()
+
+        self.assertEqual(results, ground_truth)
+
+    @parameterized.expand(single_keyword_parameters)
+    def test_single_keyword(self, language, keywords, audio_file_name):
+        self.run_porcupine(
+            language=language,
+            keywords=keywords,
+            ground_truth=[0],
+            audio_file_name=audio_file_name)
+
+    @parameterized.expand(multiple_keywords_parameters)
+    def test_multiple_keywords(self, language, keywords, ground_truth):
+        self.run_porcupine(
+            language=language,
+            keywords=keywords,
+            ground_truth=ground_truth)
+
+    def test_with_non_ascii_model_name(self):
+        self.run_porcupine(
+            language='es',
+            keywords=['murciélago'],
+            ground_truth=[0, 0],
+            audio_file_name='murciélago.wav')
+
+    def test_message_stack(self):
+        relative_path = '../..'
+
+        error = None
+        try:
+            p = Porcupine(
+                access_key='invalid',
+                library_path=pv_library_path(relative_path),
+                model_path=get_model_path_by_language(relative_path, 'en'),
+                device=self.device,
+                keyword_paths=get_keyword_paths_by_language(relative_path, 'en', ['porcupine']),
+                sensitivities=[0.5])
+            self.assertIsNone(p)
+        except PorcupineError as e:
+            error = e.message_stack
+
+        self.assertIsNotNone(error)
+        self.assertGreater(len(error), 0)
+
+        try:
+            p = Porcupine(
+                access_key='invalid',
+                library_path=pv_library_path(relative_path),
+                model_path=get_model_path_by_language(relative_path, 'en'),
+                device=self.device,
+                keyword_paths=get_keyword_paths_by_language(relative_path, 'en', ['porcupine']),
+                sensitivities=[0.5])
+            self.assertIsNone(p)
+        except PorcupineError as e:
+            self.assertEqual(len(error), len(e.message_stack))
+            self.assertListEqual(list(error), list(e.message_stack))
+
+    def test_process_message_stack(self):
+        relative_path = '../..'
+
+        p = Porcupine(
+            access_key=self.access_key,
+            library_path=pv_library_path(relative_path),
+            model_path=get_model_path_by_language(relative_path, 'en'),
+            device=self.device,
+            keyword_paths=get_keyword_paths_by_language(relative_path, 'en', ['porcupine']),
+            sensitivities=[0.5])
+        test_pcm = [0] * p.frame_length
+
+        address = p._handle
+        p._handle = None
+
+        try:
+            res = p.process(test_pcm)
+            self.assertEqual(res, 100)
+        except PorcupineError as e:
+            self.assertGreater(len(e.message_stack), 0)
+            self.assertLess(len(e.message_stack), 8)
+
+        p._handle = address
+
+    def test_available_devices(self) -> None:
+        res = list_hardware_devices(library_path=pv_library_path("../.."))
+        self.assertGreater(len(res), 0)
+        for x in res:
+            self.assertIsInstance(x, str)
+            self.assertGreater(len(x), 0)
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--access-key", required=True)
+    parser.add_argument("--device", required=True)
+    args = parser.parse_args()
+
+    PorcupineTestCase.access_key = args.access_key
+    PorcupineTestCase.device = args.device
+    unittest.main(argv=sys.argv[:1])

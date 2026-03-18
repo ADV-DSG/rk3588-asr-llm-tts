@@ -1,0 +1,12 @@
+prefix=/home/allen/ssd2/ubun-share-file/aidemo/asr/3rdparty/alsa/install
+exec_prefix=/home/allen/ssd2/ubun-share-file/aidemo/asr/3rdparty/alsa/install
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: alsa
+Description: Advanced Linux Sound Architecture (ALSA) - Library
+Version: 1.2.10
+Requires: 
+Libs: -L${libdir} -lasound
+Libs.private: -lm -lpthread -lrt
+Cflags: -I${includedir}

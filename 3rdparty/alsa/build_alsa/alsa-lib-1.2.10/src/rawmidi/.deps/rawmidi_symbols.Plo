@@ -1,0 +1,4 @@
+rawmidi_symbols.lo: rawmidi_symbols.c \
+ /usr/local/arm64/gcc-linaro-7.5.0-2019.12-x86_64_aarch64-linux-gnu/aarch64-linux-gnu/libc/usr/include/stdc-predef.h
+
+/usr/local/arm64/gcc-linaro-7.5.0-2019.12-x86_64_aarch64-linux-gnu/aarch64-linux-gnu/libc/usr/include/stdc-predef.h:

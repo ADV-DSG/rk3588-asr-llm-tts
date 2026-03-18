@@ -1,0 +1,77 @@
+name: React Native Demos
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ master ]
+    paths:
+      - 'demo/react-native/**'
+      - '!demo/react-native/README.md'
+      - '.github/workflows/react-native-demos.yml'
+  pull_request:
+    branches: [ master, 'v[0-9]+.[0-9]+' ]
+    paths:
+      - 'demo/react-native/**'
+      - '!demo/react-native/README.md'
+      - '.github/workflows/react-native-demos.yml'
+
+defaults:
+  run:
+    working-directory: demo/react-native/PorcupineDemo
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [20.x, 22.x, 24.x]
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+
+    - name: Install dependencies
+      run: yarn android-install
+
+    - name: Build bundle
+      run: yarn android-bundle pt
+
+    - name: Build
+      run: ./gradlew assembleDebug
+      working-directory: demo/react-native/PorcupineDemo/android
+
+  build-ios:
+    runs-on: macos-latest
+
+    strategy:
+      matrix:
+        node-version: [20.x, 22.x, 24.x]
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+
+    - name: Install dependencies
+      run: yarn ios-install
+
+    - name: Build bundle
+      run: yarn ios-bundle en
+
+    - name: Build
+      run: xcrun xcodebuild build
+        -configuration Debug
+        -workspace PorcupineDemo.xcworkspace
+        -sdk iphoneos
+        -scheme PorcupineDemo
+        -derivedDataPath ddp
+        CODE_SIGNING_ALLOWED=NO
+      working-directory: demo/react-native/PorcupineDemo/ios

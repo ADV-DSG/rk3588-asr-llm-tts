@@ -1,0 +1,9 @@
+node_modules
+dist
+src/lib/*
+keywords
+test/keywords/*.ppn
+cypress/fixtures/audio_samples/*
+test/porcupine_params*.js
+test/porcupine_params*.pv
+test/test_data.json

@@ -1,0 +1,138 @@
+name: Python Perfomance
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ master ]
+    paths:
+      - '.github/workflows/python-perf.yml'
+      - 'binding/python/test_porcupine_perf.py'
+      - 'lib/common/**'
+      - 'lib/linux/**'
+      - 'lib/mac/**'
+      - 'lib/raspberry-pi/**'
+      - 'lib/windows/**'
+      - 'resources/keyword_files/linux/**'
+      - 'resources/keyword_files/mac/**'
+      - 'resources/keyword_files/raspberry-pi/**'
+      - 'resources/keyword_files/windows/**'
+  pull_request:
+    branches: [ master, 'v[0-9]+.[0-9]+' ]
+    paths:
+      - '.github/workflows/python-perf.yml'
+      - 'binding/python/test_porcupine_perf.py'
+      - 'lib/common/**'
+      - 'lib/linux/**'
+      - 'lib/mac/**'
+      - 'lib/raspberry-pi/**'
+      - 'lib/windows/**'
+      - 'resources/keyword_files/linux/**'
+      - 'resources/keyword_files/mac/**'
+      - 'resources/keyword_files/raspberry-pi/**'
+      - 'resources/keyword_files/windows/**'
+
+defaults:
+  run:
+    working-directory: binding/python
+
+jobs:
+  perf-github-hosted:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest, windows-latest, macos-latest ]
+        include:
+        - os: ubuntu-latest
+          performance_threshold_sec: 0.5
+        - os: windows-latest
+          performance_threshold_sec: 0.5
+        - os: macos-latest
+          performance_threshold_sec: 0.65
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python '3.10'
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: pip install -r requirements.txt
+
+    - name: Test
+      run: >
+        python test_porcupine_perf.py
+        --access-key ${{secrets.PV_VALID_ACCESS_KEY}}
+        --device cpu:1
+        --num-test-iterations 100
+        --performance-threshold-sec ${{matrix.performance_threshold_sec}}
+
+
+  perf-self-hosted:
+    runs-on: ${{ matrix.machine }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        machine: [rpi3-32, rpi3-64, rpi4-32, rpi4-64]
+        include:
+        - machine: rpi3-32
+          num_test_iterations: 50
+          performance_threshold_sec: 3.2
+        - machine: rpi3-64
+          num_test_iterations: 50
+          performance_threshold_sec: 3.5
+        - machine: rpi4-32
+          num_test_iterations: 50
+          performance_threshold_sec: 1.5
+        - machine: rpi4-64
+          num_test_iterations: 50
+          performance_threshold_sec: 1.5
+        - machine: rpi5-64
+          num_test_iterations: 50
+          performance_threshold_sec: 0.5
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Machine state before
+      working-directory: resources/scripts
+      run: bash machine-state.sh
+
+    - name: Test
+      run: >
+        python3 test_porcupine_perf.py
+        --access-key ${{secrets.PV_VALID_ACCESS_KEY}}
+        --device cpu:1
+        --num-test-iterations ${{matrix.num_test_iterations}}
+        --performance-threshold-sec ${{matrix.performance_threshold_sec}}
+
+    - name: Machine state after
+      working-directory: resources/scripts
+      run: bash machine-state.sh
+
+  perf-windows-arm64:
+    runs-on: ${{ matrix.machine }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        machine: [pv-windows-arm64]
+        include:
+        - machine: pv-windows-arm64
+          num_test_iterations: 50
+          performance_threshold_sec: 0.5
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Test
+      run: >
+        python3 test_porcupine_perf.py
+        --access-key ${{secrets.PV_VALID_ACCESS_KEY}}
+        --device cpu:1
+        --num-test-iterations ${{matrix.num_test_iterations}}
+        --performance-threshold-sec ${{matrix.performance_threshold_sec}}
